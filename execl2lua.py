@@ -234,6 +234,14 @@ def readxlsx(indir):
             ret[name] = fname
     return ret
 
+def makexlsxlist():
+    xls_list = {}
+    for f in sys.argv[1:]:
+        (fpath,tmp) = os.path.split(f)
+        (fname,ext) = os.path.splitext(tmp)
+        if f.endswith('.xlsx') or f.endswith('.xls') :
+            xls_list[fname] = f
+    return xls_list                    
 
 def trans2lua(sctx, name,path_s,path_c):
     deep = int(config.get("path", "DEEP"))
@@ -273,8 +281,10 @@ def trans2lua(sctx, name,path_s,path_c):
         out.close()
 
 
-def main():
-    fs = readxlsx(config.get("path", "IN"))
+def main(xls_list):
+    fs=xls_list
+    if len(fs) == 0 : 
+        fs = readxlsx(config.get("path", "IN"))
     path_s=config.get("path", "SERVER_OUT")
     path_c=config.get("path", "CLINET_OUT")
     if not os.path.exists(path_s):
@@ -294,7 +304,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        main(makexlsxlist())
     except Exception as e:
         print(e)
     finally:
