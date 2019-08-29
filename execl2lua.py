@@ -113,8 +113,8 @@ class rowctx:
 
     def read_ceil(self, coltype, colname, attr, val):
         parser = getparser(coltype)
-        val_s = parser(val, attr.replace("c", "")+"s")
-        val_c = parser(val, attr.replace("s", "")+"c")
+        val_s = parser(val, attr.replace("c", "") + "s")
+        val_c = parser(val, attr.replace("s", "") + "c")
         if attr.find("k") != -1:
             if self.key_s != None:
                 raise Exception("mult key using")
@@ -130,12 +130,23 @@ class rowctx:
         if attr.find("c") != -1:
             self.row_c[colname] = val_c
 
+    def setvalue(self,k_coltype,k_attr,k_val,v_coltype,v_attr,v_val):
+        k_parser = getparser(k_coltype)
+        v_parser = getparser(v_coltype)
+
+        if k_attr.find("s") != -1:
+            self.key_s = k_parser(k_val, k_attr.replace("c", "") + "s")
+            self.row_s = v_parser(v_val, v_attr.replace("c", "") + "s")
+  
+        if k_attr.find("c") != -1:
+            self.key_c = k_parser(k_val, k_attr.replace("s", "") + "c")
+            self.row_c = v_parser(v_val, v_attr.replace("s", "") + "c")
+ 
     def finish(self):
         if self.key_s:
             self.owner.change_s(self.key_s, self.row_s)
         if self.key_c:
             self.owner.change_c(self.key_c, self.row_c)
-
 
 class tablectx:
     def __init__(self, owner, name):
@@ -211,6 +222,39 @@ def transfer_z(sctx, bootsheet):
 
     tctx.finish()
 
+def transfer_y(sctx, bootsheet):
+    name = bootsheet.name.encode(encoding)
+    if bootsheet.nrows < 3:
+        raise Exception("Error format " + name)
+
+    tctx = tablectx(sctx, name[2:])
+    for row in xrange(bootsheet.nrows):
+        if(row < 3):
+            continue
+        else:
+            rctx = rowctx(tctx)
+
+            k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
+            k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
+            k_cellval = bootsheet.cell(row, 0).value
+
+            v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
+            v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
+            v_cellval = bootsheet.cell(row, 1).value
+
+            try:
+                rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
+            except Exception as e:
+                import traceback
+                raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
+                                + ("(")+str(row)+")\n"
+                                + repr(e)+"\n"
+                                + traceback.format_exc())
+
+            rctx.finish()
+
+    tctx.finish()
+
 
 def transferfile(name, path):
     sctx = sheetctx(name)
@@ -219,6 +263,9 @@ def transferfile(name, path):
         booksheetname = booksheet.name.encode(encoding)
         if booksheetname.startswith("z_"):
             transfer_z(sctx, booksheet)
+            continue
+        if booksheetname.startswith("y_"):
+            transfer_y(sctx, booksheet)
             continue
 
     return sctx
@@ -230,7 +277,7 @@ def readxlsx(indir):
     for f in fs:
         fname = indir+"/"+f
         (name, ext) = os.path.splitext(f)
-        if os.path.isfile(fname):
+        if os.path.isfile(fname) and (fname.endswith(".xlsx") or fname.endswith('.xls')):
             ret[name] = fname
     return ret
 
@@ -298,8 +345,6 @@ def main(xls_list):
         sctx = transferfile(f, path)
 
         trans2lua(sctx, f,path_s,path_c)
-
-    
 
 
 if __name__ == "__main__":
