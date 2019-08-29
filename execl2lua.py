@@ -197,9 +197,9 @@ def transfer_z(sctx, bootsheet):
 
                 if len(colattr) == 0:
                     continue
-                rctx.read_ceil(coltype, colname, colattr, cellval)
+                # rctx.read_ceil(coltype, colname, colattr, cellval)
                 try:
-                    pass  # rctx.read_ceil(coltype, colname, colattr, cellval)
+                    rctx.read_ceil(coltype, colname, colattr, cellval)
                 except Exception as e:
                     import traceback
                     raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
@@ -288,8 +288,15 @@ def main():
 
         trans2lua(sctx, f,path_s,path_c)
 
-    raw_input("Press enter to quit")
+    
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(e)
+    finally:
+        raw_input("Press enter to quit")
+    
+    
