@@ -256,19 +256,20 @@ def trans2lua(sctx, name,path_s,path_c):
 
     if sctx.table_c:
         table = sctx.table_c
-        fname = path_c + "/" + name + ".lua"
+        fname = path_c + "/prop_" + name + ".lua"
         print("\t"+fname)
         out = open(fname, "w")
-        out.write("module(\"" + name + "\")\n")
+        out.write("module(\"resmng\")\n\n")
         keys = table.keys()
         keys.sort()
         for f in keys:
             print("\t\tadd " + f)
-            out.write(f)
+            f_name = 'prop%s' % (f.capitalize())
+            f_name_data = f_name + 'Data'
+            out.write(f_name_data)
             out.write("=")
             out.write(tolua.trans_obj(table[f], 0, deep))
-            out.write("\n")
-
+            out.write("\n\n")
         out.close()
 
 
