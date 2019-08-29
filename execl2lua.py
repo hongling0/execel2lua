@@ -49,25 +49,20 @@ def parser_double(s, attr):
 
 
 def parser_string(s, attr):
-    if not isinstance(s, float):
-        if s == "" and attr.find("e") != -1:
-            return None
+    if s == "" and attr.find("e") != -1:
+        return None
     return str(s).encode(encoding)
-
-
-def parser_any(s, attr):
-    mobj = re.math(r"(.*?)\|(.*)", s)
-    if mobj:
-        parser = mobj.group(1)
-        sn = mobj.group(2)
-        return getparser(parser)(sn, attr)
-
+ 
+def parser_luacode(s, attr):
+    if s == "" and attr.find("e") != -1:
+        return None
+    return tolua.luacode(s)
 
 PARSERLIST = {}
 PARSERLIST["integer"] = parser_integer
 PARSERLIST["double"] = parser_double
 PARSERLIST["string"] = parser_string
-PARSERLIST["any"] = parser_any
+PARSERLIST["luacode"] = parser_luacode
 
 
 def getparser(ptype):
@@ -107,7 +102,6 @@ def buildalise(ptype):
                     r.append(subcall[-1](l[i], attr))
             return r
         return array_func
-
 
 class rowctx:
     def __init__(self, owner):
@@ -241,12 +235,12 @@ def readxlsx(indir):
     return ret
 
 
-def trans2lua(sctx, name):
+def trans2lua(sctx, name,path_s,path_c):
     deep = int(config.get("path", "DEEP"))
 
     if sctx.table_s:
         table = sctx.table_s
-        fname = config.get("path", "SERVER_OUT") + "/" + name + ".lua"
+        fname = path_s + "/" + name + ".lua"
         print("\t"+fname)
         out = open(fname, "w")
         keys = table.keys()
@@ -262,7 +256,7 @@ def trans2lua(sctx, name):
 
     if sctx.table_c:
         table = sctx.table_c
-        fname = config.get("path", "CLINET_OUT") + "/" + name + ".lua"
+        fname = path_c + "/" + name + ".lua"
         print("\t"+fname)
         out = open(fname, "w")
         out.write("module(\"" + name + "\")\n")
@@ -280,16 +274,21 @@ def trans2lua(sctx, name):
 
 def main():
     fs = readxlsx(config.get("path", "IN"))
+    path_s=config.get("path", "SERVER_OUT")
+    path_c=config.get("path", "CLINET_OUT")
+    if not os.path.exists(path_s):
+        os.makedirs(path_s)
+    if not os.path.exists(path_c):
+        os.makedirs(path_c)
 
     for f in fs.keys():
         path = fs[f]
         print("transferfile " + path)
         sctx = transferfile(f, path)
 
-        trans2lua(sctx, f)
+        trans2lua(sctx, f,path_s,path_c)
 
-    print("Press enter to quit")
-    input()
+    raw_input("Press enter to quit")
 
 
 if __name__ == "__main__":

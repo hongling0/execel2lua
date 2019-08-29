@@ -3,6 +3,16 @@
 # email hongling0@gmail.com
 import os
 
+class luacode:
+    def __init__(self,s):
+        if isinstance(s,float):
+            if int(s)==s:
+                s=int(s)
+        elif s=="":
+            s="\"\""
+        self._str=str(s)
+    def __str__(self):
+        return self._str
 
 def septer(deep, ending_deep):
     if deep > ending_deep:
@@ -57,7 +67,9 @@ def trans_list(obj, deep, ending_deep):
 
 def trans_obj(obj, deep, ending_deep):
     space, ending = septer(deep, ending_deep)
-    if isinstance(obj, int):
+    if isinstance(obj,luacode):
+        return str(obj)
+    elif isinstance(obj, int):
         return str(obj)
     elif isinstance(obj, long):
         return str(obj)
