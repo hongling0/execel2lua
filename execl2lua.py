@@ -212,6 +212,9 @@ def transfer_z(sctx, bootsheet):
                 colattr = bootsheet.cell(3, col).value.encode(encoding)
                 cellval = bootsheet.cell(row, col).value
 
+                if str(cellval).startswith("//"):
+                    continue
+
                 if len(colattr) == 0:
                     continue
                 # rctx.read_ceil(coltype, colname, colattr, cellval)
@@ -220,7 +223,7 @@ def transfer_z(sctx, bootsheet):
                 except Exception as e:
                     import traceback
                     raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                    + ("(")+str(row)+", "+str(col)+")\n"
+                                    + ("(")+str(row+1)+", "+str(col)+")\n"
                                     + repr(e)+"\n"
                                     + traceback.format_exc())
 
@@ -243,17 +246,21 @@ def transfer_y(sctx, bootsheet):
             k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
             k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
             k_cellval = bootsheet.cell(row, 0).value
+            if str(k_cellval).startswith("//"):
+                continue
 
             v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
             v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
             v_cellval = bootsheet.cell(row, 1).value
+            if str(v_cellval).startswith("//"):
+                continue
 
             try:
                 rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
             except Exception as e:
                 import traceback
                 raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                + ("(")+str(row)+")\n"
+                                + ("(")+str(row+1)+")\n"
                                 + repr(e)+"\n"
                                 + traceback.format_exc())
 
@@ -276,17 +283,21 @@ def transfer_g(sctx, bootsheet):
             k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
             k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
             k_cellval = bootsheet.cell(row, 0).value
+            if str(k_cellval).startswith("//"):
+                continue
 
             v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
             v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
             v_cellval = bootsheet.cell(row, 1).value
+            if str(v_cellval).startswith("//"):
+                continue
 
             try:
                 rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
             except Exception as e:
                 import traceback
                 raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                + ("(")+str(row)+")\n"
+                                + ("(")+str(row+1)+")\n"
                                 + repr(e)+"\n"
                                 + traceback.format_exc())
 
@@ -407,6 +418,8 @@ def main(xls_list):
 
         trans2lua(sctx, f,path_s,path_c)
 
+if __name__ == "__main__":
+    main(makexlsxlist())
 
 if __name__ == "__main__":
     try:
