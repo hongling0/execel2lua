@@ -19,9 +19,9 @@ class luacode:
 
 def septer(deep, ending_deep):
     if deep > ending_deep:
-        return "", ""
+        return "", " "
     else:
-        return "\t", "\n"
+        return "    ", "\n"
 
 
 def multsp(n, sp):
@@ -38,17 +38,17 @@ def trans_dict(obj, deep, ending_deep):
         if val is not None:
             v = multsp(deep, space)
             if isinstance(k, int):
-                v = v + "[" + str(k) + "]="
+                v = v + "[" + str(k) + "] = "
             elif isinstance(k, str):
                 try:
                     float(k)
                 except ValueError as e:
                     if k.startswith(numchar) or k.find("%") != -1:
-                        v = v + "['" + str(k) + "']="
+                        v = v + "['" + str(k) + "'] = "
                     else:
-                        v = v + str(k) + "="
+                        v = v + str(k) + " = "
                 else:
-                    v = v + "['" + str(k) + "']="
+                    v = v + "['" + str(k) + "'] = "
             v = v + trans_obj(val, deep, ending_deep)
             vals.append(v)
 
@@ -62,6 +62,8 @@ def trans_list(obj, deep, ending_deep):
     for i in xrange(len(obj)):
         v = multsp(deep, space) + trans_obj(obj[i], deep, ending_deep)
         vals.append(v)
+    if len(vals)==0:
+        ending=""
     return "{" + ending + ("," + ending).join(vals) + \
         ending + multsp(deep - 1, space) + "}"
 

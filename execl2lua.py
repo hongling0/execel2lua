@@ -45,6 +45,8 @@ def parser_double(s, attr):
     if not isinstance(s, float):
         if s == "" and attr.find("e") != -1:
             return None
+    if int(float(s))==float(s):
+        return int(float(s))
     return float(s)
 
 
@@ -347,6 +349,7 @@ def eacho_tables(tables,cb):
         tables.pop("_G")
         eacho_tables_inner(data,False)
 
+
     eacho_tables_inner(tables,True)
     
 
@@ -360,7 +363,7 @@ def trans2lua(sctx, name,path_s,path_c):
 
         def writer_s(f,data):
             out.write(f)
-            out.write("=")
+            out.write(" = ")
             out.write(tolua.trans_obj(data, 0, deep))
             out.write("\n")
 
@@ -378,7 +381,7 @@ def trans2lua(sctx, name,path_s,path_c):
             f_name = 'prop%s' % (f.capitalize())
             f_name_data = f_name + 'Data'
             out.write(f_name_data)
-            out.write("=")
+            out.write(" = ")
             out.write(tolua.trans_obj(data, 0, deep))
             out.write("\n\n")
 
@@ -406,9 +409,9 @@ def main(xls_list):
 
 
 if __name__ == "__main__":
-    #try:
+    try:
         main(makexlsxlist())
-    #except Exception as e:
-        #print(e.message)
-    #finally:
+    except Exception as e:
+        print(e.message)
+    finally:
         raw_input("Press enter to quit")
