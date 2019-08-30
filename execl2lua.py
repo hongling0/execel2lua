@@ -418,8 +418,6 @@ def main(xls_list):
 
         trans2lua(sctx, f,path_s,path_c)
 
-if __name__ == "__main__":
-    main(makexlsxlist())
 
 if __name__ == "__main__":
     try:
