@@ -181,11 +181,15 @@ class sheetctx:
     def change_s(self, key, row):
         if self.table_s == None:
             self.table_s = {}
+        if self.table_s.get(key,None):
+            raise Exception("dumplicate global index" + key)
         self.table_s[key] = row
 
     def change_c(self, key, row):
         if self.table_c == None:
             self.table_c = {}
+        if self.table_c.get(key,None):
+            raise Exception("dumplicate global index" + key)
         self.table_c[key] = row
 
 
@@ -255,6 +259,39 @@ def transfer_y(sctx, bootsheet):
 
     tctx.finish()
 
+def transfer_g(sctx, bootsheet):
+    name = bootsheet.name.encode(encoding)
+    if bootsheet.nrows < 3:
+        raise Exception("Error format " + name)
+
+    tctx = tablectx(sctx, "_G".encode(encoding))
+    for row in xrange(bootsheet.nrows):
+        if(row < 3):
+            continue
+        else:
+            rctx = rowctx(tctx)
+
+            k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
+            k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
+            k_cellval = bootsheet.cell(row, 0).value
+
+            v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
+            v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
+            v_cellval = bootsheet.cell(row, 1).value
+
+            try:
+                rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
+            except Exception as e:
+                import traceback
+                raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
+                                + ("(")+str(row)+")\n"
+                                + repr(e)+"\n"
+                                + traceback.format_exc())
+
+            rctx.finish()
+
+    tctx.finish()
+
 
 def transferfile(name, path):
     sctx = sheetctx(name)
@@ -266,6 +303,10 @@ def transferfile(name, path):
             continue
         if booksheetname.startswith("y_"):
             transfer_y(sctx, booksheet)
+            continue
+
+        if booksheetname=="_G":
+            transfer_g(sctx, booksheet)
             continue
 
     return sctx
@@ -288,43 +329,60 @@ def makexlsxlist():
         (fname,ext) = os.path.splitext(tmp)
         if f.endswith('.xlsx') or f.endswith('.xls') :
             xls_list[fname] = f
-    return xls_list                    
+    return xls_list
+
+def eacho_tables(tables,cb):
+    
+    def eacho_tables_inner(datas,show):
+        keys = datas.keys()
+        keys.sort()
+        for f in keys:
+            if show:
+                print("\tadd "+f)
+            cb(f,datas[f])
+
+    data=tables.get("_G",None)
+    if data:
+        print("\tadd _G")
+        tables.pop("_G")
+        eacho_tables_inner(data,False)
+
+    eacho_tables_inner(tables,True)
+    
 
 def trans2lua(sctx, name,path_s,path_c):
     deep = int(config.get("path", "DEEP"))
-
     if sctx.table_s:
         table = sctx.table_s
         fname = path_s + "/" + name + ".lua"
-        print("\t"+fname)
+        print(fname)
         out = open(fname, "w")
-        keys = table.keys()
-        keys.sort()
-        for f in keys:
-            print("\t\tadd " + f)
+
+        def writer_s(f,data):
             out.write(f)
             out.write("=")
-            out.write(tolua.trans_obj(table[f], 0, deep))
+            out.write(tolua.trans_obj(data, 0, deep))
             out.write("\n")
 
+        eacho_tables(table,writer_s)
         out.close()
 
     if sctx.table_c:
         table = sctx.table_c
         fname = path_c + "/prop_" + name + ".lua"
-        print("\t"+fname)
+        print(fname)
         out = open(fname, "w")
         out.write("module(\"resmng\")\n\n")
-        keys = table.keys()
-        keys.sort()
-        for f in keys:
-            print("\t\tadd " + f)
+
+        def writer_c(f,data):
             f_name = 'prop%s' % (f.capitalize())
             f_name_data = f_name + 'Data'
             out.write(f_name_data)
             out.write("=")
-            out.write(tolua.trans_obj(table[f], 0, deep))
+            out.write(tolua.trans_obj(data, 0, deep))
             out.write("\n\n")
+
+        eacho_tables(table,writer_c)
         out.close()
 
 
@@ -348,11 +406,9 @@ def main(xls_list):
 
 
 if __name__ == "__main__":
-    try:
+    #try:
         main(makexlsxlist())
-    except Exception as e:
-        print(e)
-    finally:
+    #except Exception as e:
+        #print(e.message)
+    #finally:
         raw_input("Press enter to quit")
-    
-    
