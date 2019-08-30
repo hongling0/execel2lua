@@ -206,6 +206,7 @@ def transfer_z(sctx, bootsheet):
             continue
         else:
             rctx = rowctx(tctx)
+            skip = False
             for col in xrange(bootsheet.ncols):
                 coltype = bootsheet.cell(1, col).value.encode(encoding)
                 colname = bootsheet.cell(2, col).value.encode(encoding)
@@ -213,7 +214,8 @@ def transfer_z(sctx, bootsheet):
                 cellval = bootsheet.cell(row, col).value
 
                 if str(cellval).startswith("//"):
-                    continue
+                    skip = True
+                    break
 
                 if len(colattr) == 0:
                     continue
@@ -226,8 +228,8 @@ def transfer_z(sctx, bootsheet):
                                     + ("(")+str(row+1)+", "+str(col)+")\n"
                                     + repr(e)+"\n"
                                     + traceback.format_exc())
-
-            rctx.finish()
+            if not skip:
+                rctx.finish()
 
     tctx.finish()
 
