@@ -2,21 +2,26 @@
 # -*- coding UTF-8 -*-
 # email hongling0@gmail.com
 
+import traceback
 import xlrd
 import os
 import math
-import ConfigParser
+import configparser
 import sys
 import time
 import re
 import tolua
+import importlib
+import traceback
 
-reload(sys)
+importlib.reload(sys)
 encoding = "utf-8"
-sys.setdefaultencoding(encoding)
 
-config = ConfigParser.ConfigParser()
-config.readfp(open("cfg.ini"))
+config = configparser.ConfigParser()
+config['path'] = {
+    'USEG': '1'
+}
+config.read_file(open("cfg.ini"))
 
 
 def init_alise():
@@ -45,7 +50,7 @@ def parser_double(s, attr):
     if not isinstance(s, float):
         if s == "" and attr.find("e") != -1:
             return None
-    if int(float(s))==float(s):
+    if int(float(s)) == float(s):
         return int(float(s))
     return float(s)
 
@@ -53,12 +58,14 @@ def parser_double(s, attr):
 def parser_string(s, attr):
     if s == "" and attr.find("e") != -1:
         return None
-    return str(s).encode(encoding)
- 
+    return str(s)
+
+
 def parser_luacode(s, attr):
     if s == "" and attr.find("e") != -1:
         return None
     return tolua.luacode(s)
+
 
 PARSERLIST = {}
 PARSERLIST["integer"] = parser_integer
@@ -78,7 +85,7 @@ def getparser(ptype):
             PARSERLIST[ptype] = parser
             return parser
 
-    raise Exception("unknow type " + ptype)
+    raise Exception("unknow type " + ptype.decode())
 
 
 def buildalise(ptype):
@@ -97,13 +104,14 @@ def buildalise(ptype):
                 else:
                     return r
             l = str(s).split(sp)
-            for i in xrange(len(l)):
+            for i in range(len(l)):
                 if(i < len(subcall)):
                     r.append(subcall[i](l[i], attr))
                 else:
                     r.append(subcall[-1](l[i], attr))
             return r
         return array_func
+
 
 class rowctx:
     def __init__(self, owner):
@@ -132,23 +140,24 @@ class rowctx:
         if attr.find("c") != -1:
             self.row_c[colname] = val_c
 
-    def setvalue(self,k_coltype,k_attr,k_val,v_coltype,v_attr,v_val):
+    def setvalue(self, k_coltype, k_attr, k_val, v_coltype, v_attr, v_val):
         k_parser = getparser(k_coltype)
         v_parser = getparser(v_coltype)
 
         if k_attr.find("s") != -1:
             self.key_s = k_parser(k_val, k_attr.replace("c", "") + "s")
             self.row_s = v_parser(v_val, v_attr.replace("c", "") + "s")
-  
+
         if k_attr.find("c") != -1:
             self.key_c = k_parser(k_val, k_attr.replace("s", "") + "c")
             self.row_c = v_parser(v_val, v_attr.replace("s", "") + "c")
- 
+
     def finish(self):
         if self.key_s:
             self.owner.change_s(self.key_s, self.row_s)
         if self.key_c:
             self.owner.change_c(self.key_c, self.row_c)
+
 
 class tablectx:
     def __init__(self, owner, name):
@@ -183,34 +192,34 @@ class sheetctx:
     def change_s(self, key, row):
         if self.table_s == None:
             self.table_s = {}
-        if self.table_s.get(key,None):
+        if self.table_s.get(key, None):
             raise Exception("dumplicate global index" + key)
         self.table_s[key] = row
 
     def change_c(self, key, row):
         if self.table_c == None:
             self.table_c = {}
-        if self.table_c.get(key,None):
+        if self.table_c.get(key, None):
             raise Exception("dumplicate global index" + key)
         self.table_c[key] = row
 
 
 def transfer_z(sctx, bootsheet):
-    name = bootsheet.name.encode(encoding)
+    name = bootsheet.name
     if bootsheet.nrows < 4:
         raise Exception("Error format " + name)
 
     tctx = tablectx(sctx, name[2:])
-    for row in xrange(bootsheet.nrows):
+    for row in range(bootsheet.nrows):
         if(row < 4):
             continue
         else:
             rctx = rowctx(tctx)
             skip = False
-            for col in xrange(bootsheet.ncols):
-                coltype = bootsheet.cell(1, col).value.encode(encoding)
-                colname = bootsheet.cell(2, col).value.encode(encoding)
-                colattr = bootsheet.cell(3, col).value.encode(encoding)
+            for col in range(bootsheet.ncols):
+                coltype = bootsheet.cell(1, col).value
+                colname = bootsheet.cell(2, col).value
+                colattr = bootsheet.cell(3, col).value
                 cellval = bootsheet.cell(row, col).value
 
                 if str(cellval).startswith("//"):
@@ -223,84 +232,87 @@ def transfer_z(sctx, bootsheet):
                 try:
                     rctx.read_ceil(coltype, colname, colattr, cellval)
                 except Exception as e:
-                    import traceback
-                    raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                    + ("(")+str(row+1)+", "+str(col)+")\n"
-                                    + repr(e)+"\n"
+                    raise Exception("Exception @" + name + "." + bootsheet.name
+                                    + ("(") + str(row+1) + ", " + str(col) + ")\n"
+                                    + repr(e) + "\n"
                                     + traceback.format_exc())
             if not skip:
                 rctx.finish()
 
     tctx.finish()
 
+
 def transfer_y(sctx, bootsheet):
-    name = bootsheet.name.encode(encoding)
+    name = bootsheet.name
     if bootsheet.nrows < 3:
         raise Exception("Error format " + name)
 
     tctx = tablectx(sctx, name[2:])
-    for row in xrange(bootsheet.nrows):
+    for row in range(bootsheet.nrows):
         if(row < 3):
             continue
         else:
             rctx = rowctx(tctx)
 
-            k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
-            k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
+            k_coltype = bootsheet.cell(1, 0).value
+            k_colattr = bootsheet.cell(2, 0).value
             k_cellval = bootsheet.cell(row, 0).value
             if str(k_cellval).startswith("//"):
                 continue
 
-            v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
-            v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
+            v_coltype = bootsheet.cell(1, 1).value
+            v_colattr = bootsheet.cell(2, 1).value
             v_cellval = bootsheet.cell(row, 1).value
             if str(v_cellval).startswith("//"):
                 continue
 
             try:
-                rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
+                rctx.setvalue(k_coltype, k_colattr, k_cellval,
+                              v_coltype, v_colattr, v_cellval)
             except Exception as e:
-                import traceback
-                raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                + ("(")+str(row+1)+")\n"
-                                + repr(e)+"\n"
+                raise Exception("Exception @"+name
+                                + "." + bootsheet.name
+                                + ("(") + str(row + 1) + ")\n"
+                                + repr(e) + "\n"
                                 + traceback.format_exc())
 
             rctx.finish()
 
     tctx.finish()
 
+
 def transfer_g(sctx, bootsheet):
-    name = bootsheet.name.encode(encoding)
+    name = bootsheet.name
     if bootsheet.nrows < 3:
         raise Exception("Error format " + name)
 
-    tctx = tablectx(sctx, "_G".encode(encoding))
-    for row in xrange(bootsheet.nrows):
+    tctx = tablectx(sctx, "_G")
+    for row in range(bootsheet.nrows):
         if(row < 3):
             continue
         else:
             rctx = rowctx(tctx)
 
-            k_coltype = bootsheet.cell(1, 0).value.encode(encoding)
-            k_colattr = bootsheet.cell(2, 0).value.encode(encoding)
+            k_coltype = bootsheet.cell(1, 0).value
+            k_colattr = bootsheet.cell(2, 0).value
             k_cellval = bootsheet.cell(row, 0).value
             if str(k_cellval).startswith("//"):
                 continue
 
-            v_coltype = bootsheet.cell(1, 1).value.encode(encoding)
-            v_colattr = bootsheet.cell(2, 1).value.encode(encoding)
+            v_coltype = bootsheet.cell(1, 1).value
+            v_colattr = bootsheet.cell(2, 1).value
             v_cellval = bootsheet.cell(row, 1).value
             if str(v_cellval).startswith("//"):
                 continue
 
             try:
-                rctx.setvalue(k_coltype,k_colattr,k_cellval,v_coltype,v_colattr,v_cellval)
+                rctx.setvalue(k_coltype, k_colattr, k_cellval,
+                              v_coltype, v_colattr, v_cellval)
             except Exception as e:
                 import traceback
-                raise Exception("Exception @"+name+"."+bootsheet.name.encode(encoding)
-                                + ("(")+str(row+1)+")\n"
-                                + repr(e)+"\n"
+                raise Exception("Exception @" + name + "." + bootsheet.name
+                                + ("(") + str(row + 1) + ")\n"
+                                + repr(e) + "\n"
                                 + traceback.format_exc())
 
             rctx.finish()
@@ -312,15 +324,15 @@ def transferfile(name, path):
     sctx = sheetctx(name)
     workbook = xlrd.open_workbook(path)
     for booksheet in workbook.sheets():
-        booksheetname = booksheet.name.encode(encoding)
-        if booksheetname.startswith("z_"):
+        booksheetname = booksheet.name
+        if booksheetname.startswith('z_'):
             transfer_z(sctx, booksheet)
             continue
         if booksheetname.startswith("y_"):
             transfer_y(sctx, booksheet)
             continue
 
-        if booksheetname=="_G":
+        if booksheetname == "_G":
             transfer_g(sctx, booksheet)
             continue
 
@@ -337,50 +349,55 @@ def readxlsx(indir):
             ret[name] = fname
     return ret
 
+
 def makexlsxlist():
     xls_list = {}
     for f in sys.argv[1:]:
-        (fpath,tmp) = os.path.split(f)
-        (fname,ext) = os.path.splitext(tmp)
-        if f.endswith('.xlsx') or f.endswith('.xls') :
+        (fpath, tmp) = os.path.split(f)
+        (fname, ext) = os.path.splitext(tmp)
+        if f.endswith('.xlsx') or f.endswith('.xls'):
             xls_list[fname] = f
     return xls_list
 
-def eacho_tables(tables,cb):
-    
-    def eacho_tables_inner(datas,show):
-        keys = datas.keys()
-        keys.sort()
+
+def eacho_tables(tables, cb):
+    def eacho_tables_inner(datas, show):
+        keys = sorted(datas.keys())
         for f in keys:
             if show:
                 print("\tadd "+f)
-            cb(f,datas[f])
+            cb(f, datas[f])
 
-    data=tables.get("_G",None)
+    data = tables.get("_G", None)
     if data:
         print("\tadd _G")
         tables.pop("_G")
-        eacho_tables_inner(data,False)
+        eacho_tables_inner(data, False)
+
+    eacho_tables_inner(tables, True)
 
 
-    eacho_tables_inner(tables,True)
-    
-
-def trans2lua(sctx, name,path_s,path_c):
-    deep = int(config.get("path", "DEEP"))
+def trans2lua(sctx, name, path_s, path_c):
+    deep = config.getint("path", "DEEP")
     if sctx.table_s:
         table = sctx.table_s
         fname = path_s + "/" + name + ".lua"
         print(fname)
         out = open(fname, "w")
 
-        def writer_s(f,data):
-            out.write(f)
-            out.write(" = ")
-            out.write(tolua.trans_obj(data, 0, deep))
+        if 1 == config.getint("path", "USEG"):
+            def writer_s(f, data):
+                out.write(f)
+                out.write(" = ")
+                out.write(tolua.trans_obj(data, 0, deep))
+                out.write("\n")
+            eacho_tables(table, writer_s)
+        else:
+            out.write("return ")
+            out.write(tolua.trans_obj(table, 0, deep + 1))
+            for f in sorted(table.keys()):
+                print("\tadd "+f)
             out.write("\n")
-
-        eacho_tables(table,writer_s)
         out.close()
 
     if sctx.table_c:
@@ -390,7 +407,7 @@ def trans2lua(sctx, name,path_s,path_c):
         out = open(fname, "w")
         out.write("module(\"resmng\")\n\n")
 
-        def writer_c(f,data):
+        def writer_c(f, data):
             f_name = 'prop%s' % (f.capitalize())
             f_name_data = f_name + 'Data'
             out.write(f_name_data)
@@ -398,16 +415,16 @@ def trans2lua(sctx, name,path_s,path_c):
             out.write(tolua.trans_obj(data, 0, deep))
             out.write("\n\n")
 
-        eacho_tables(table,writer_c)
+        eacho_tables(table, writer_c)
         out.close()
 
 
 def main(xls_list):
-    fs=xls_list
-    if len(fs) == 0 : 
+    fs = xls_list
+    if len(fs) == 0:
         fs = readxlsx(config.get("path", "IN"))
-    path_s=config.get("path", "SERVER_OUT")
-    path_c=config.get("path", "CLINET_OUT")
+    path_s = config.get("path", "SERVER_OUT")
+    path_c = config.get("path", "CLINET_OUT")
     if not os.path.exists(path_s):
         os.makedirs(path_s)
     if not os.path.exists(path_c):
@@ -418,13 +435,17 @@ def main(xls_list):
         print("transferfile " + path)
         sctx = transferfile(f, path)
 
-        trans2lua(sctx, f,path_s,path_c)
+        trans2lua(sctx, f, path_s, path_c)
 
 
 if __name__ == "__main__":
     try:
         main(makexlsxlist())
     except Exception as e:
-        print(e.message)
+        import traceback
+        msg = traceback.format_exc()
+        print(e)
+        print(msg)
+        print(e.args)
     finally:
-        raw_input("Press enter to quit")
+        input("Press enter to quit")

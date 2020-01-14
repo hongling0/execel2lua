@@ -19,9 +19,9 @@ class luacode:
 
 def septer(deep, ending_deep):
     if deep > ending_deep:
-        return "", " "
+        return "", "", " "
     else:
-        return "    ", "\n"
+        return "    ", "\n", "\n"
 
 
 def multsp(n, sp):
@@ -30,7 +30,7 @@ def multsp(n, sp):
 
 def trans_dict(obj, deep, ending_deep):
     numchar = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
-    space, ending = septer(deep, ending_deep)
+    space, ending, sep = septer(deep, ending_deep)
     keys = sorted(obj.keys())
     vals = []
     for k in keys:
@@ -51,30 +51,30 @@ def trans_dict(obj, deep, ending_deep):
                     v = v + "['" + str(k) + "'] = "
             v = v + trans_obj(val, deep, ending_deep)
             vals.append(v)
+            
+    if len(vals)==0:
+        ending=""
 
-    return "{" + ending + ("," + ending).join(vals) + \
+    return "{" + ending + ("," + sep).join(vals) + \
         ending + multsp(deep - 1, space) + "}"
 
 
 def trans_list(obj, deep, ending_deep):
-    space, ending = septer(deep, ending_deep)
+    space, ending, sep = septer(deep, ending_deep)
     vals = []
-    for i in xrange(len(obj)):
+    for i in range(len(obj)):
         v = multsp(deep, space) + trans_obj(obj[i], deep, ending_deep)
         vals.append(v)
     if len(vals)==0:
         ending=""
-    return "{" + ending + ("," + ending).join(vals) + \
+    return "{" + ending + ("," + sep).join(vals) + \
         ending + multsp(deep - 1, space) + "}"
 
 
 def trans_obj(obj, deep, ending_deep):
-    space, ending = septer(deep, ending_deep)
     if isinstance(obj, luacode):
         return str(obj)
     elif isinstance(obj, int):
-        return str(obj)
-    elif isinstance(obj, long):
         return str(obj)
     elif isinstance(obj, float):
         return str(obj)
