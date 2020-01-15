@@ -120,25 +120,36 @@ class rowctx:
         self.row_s = {}
         self.row_c = {}
         self.owner = owner
+        self.flag = 3
+
+    def readflag(self, coltype, attr, val):
+        if attr == 'limit':
+            self.flag = 0
+            if val.find("c") != -1:
+                self.flag |= (1 << 0)
+            if val.find("s") != -1:
+                self.flag |= (1 << 1)
+            return True
 
     def read_ceil(self, coltype, colname, attr, val):
-        parser = getparser(coltype)
-        val_s = parser(val, attr.replace("c", "") + "s")
-        val_c = parser(val, attr.replace("s", "") + "c")
-        if attr.find("k") != -1:
-            if self.key_s != None:
-                raise Exception("mult key using")
-            self.key_s = val_s
+        if not self.readflag(coltype, attr, val):
+            parser = getparser(coltype)
+            val_s = parser(val, attr.replace("c", "") + "s")
+            val_c = parser(val, attr.replace("s", "") + "c")
+            if attr.find("k") != -1:
+                if self.key_s != None:
+                    raise Exception("mult key using")
+                self.key_s = val_s
 
-            if self.key_c != None:
-                raise Exception("mult key using")
-            self.key_c = val_c
+                if self.key_c != None:
+                    raise Exception("mult key using")
+                self.key_c = val_c
 
-        if attr.find("s") != -1:
-            self.row_s[colname] = val_s
+            if attr.find("s") != -1:
+                self.row_s[colname] = val_s
 
-        if attr.find("c") != -1:
-            self.row_c[colname] = val_c
+            if attr.find("c") != -1:
+                self.row_c[colname] = val_c
 
     def setvalue(self, k_coltype, k_attr, k_val, v_coltype, v_attr, v_val):
         k_parser = getparser(k_coltype)
@@ -153,10 +164,10 @@ class rowctx:
             self.row_c = v_parser(v_val, v_attr.replace("s", "") + "c")
 
     def finish(self):
-        if self.key_s:
-            self.owner.change_s(self.key_s, self.row_s)
-        if self.key_c:
+        if self.key_c and (self.flag & (1 << 0)):
             self.owner.change_c(self.key_c, self.row_c)
+        if self.key_s and (self.flag & (1 << 1)):
+            self.owner.change_s(self.key_s, self.row_s)
 
 
 class tablectx:
@@ -247,6 +258,13 @@ def transfer_y(sctx, bootsheet):
     if bootsheet.nrows < 3:
         raise Exception("Error format " + name)
 
+    k_coltype = bootsheet.cell(1, 0).value
+    k_colattr = bootsheet.cell(2, 0).value
+    v_coltype = bootsheet.cell(1, 1).value
+    v_colattr = bootsheet.cell(2, 1).value
+    l_coltype = bootsheet.cell(1, 2).value
+    l_colattr = bootsheet.cell(2, 2).value
+
     tctx = tablectx(sctx, name[2:])
     for row in range(bootsheet.nrows):
         if(row < 3):
@@ -254,19 +272,16 @@ def transfer_y(sctx, bootsheet):
         else:
             rctx = rowctx(tctx)
 
-            k_coltype = bootsheet.cell(1, 0).value
-            k_colattr = bootsheet.cell(2, 0).value
             k_cellval = bootsheet.cell(row, 0).value
             if str(k_cellval).startswith("//"):
                 continue
-
-            v_coltype = bootsheet.cell(1, 1).value
-            v_colattr = bootsheet.cell(2, 1).value
             v_cellval = bootsheet.cell(row, 1).value
             if str(v_cellval).startswith("//"):
                 continue
 
             try:
+                rctx.readflag(l_coltype, l_colattr,
+                              bootsheet.cell(row, 2).value)
                 rctx.setvalue(k_coltype, k_colattr, k_cellval,
                               v_coltype, v_colattr, v_cellval)
             except Exception as e:
@@ -377,11 +392,17 @@ def eacho_tables(tables, cb):
     eacho_tables_inner(tables, True)
 
 
+def abspath(path):
+    if os.path.isabs(path):
+        return path
+    return os.path.abspath(path)
+
+
 def trans2lua(sctx, name, path_s, path_c):
     deep = config.getint("path", "DEEP")
     if sctx.table_s:
         table = sctx.table_s
-        fname = path_s + "/" + name + ".lua"
+        fname = os.path.join(path_s, name + ".lua")
         print(fname)
         out = open(fname, "w")
 
@@ -402,7 +423,7 @@ def trans2lua(sctx, name, path_s, path_c):
 
     if sctx.table_c:
         table = sctx.table_c
-        fname = path_c + "/prop_" + name + ".lua"
+        fname = os.path.join(path_c, "prop_" + name + ".lua")
         print(fname)
         out = open(fname, "w")
         out.write("module(\"resmng\")\n\n")
@@ -435,7 +456,7 @@ def main(xls_list):
         print("transferfile " + path)
         sctx = transferfile(f, path)
 
-        trans2lua(sctx, f, path_s, path_c)
+        trans2lua(sctx, f, abspath(path_s), abspath(path_c))
 
 
 if __name__ == "__main__":
