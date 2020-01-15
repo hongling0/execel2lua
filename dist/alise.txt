@@ -2,3 +2,6 @@ tableint=array<;,integer>
 tableint2=array<|,tableint>
 tabledouble=array<;,double>
 tablestring=array<;,string>
+tablestr2=array<|,tablestring>
+tablem=array<;,string,integer>
+tablem2=array<|,tablem>
