@@ -1,0 +1,4 @@
+tableint=array<;,integer>
+tableint2=array<|,tableint>
+tabledouble=array<;,double>
+tablestring=array<;,string>
