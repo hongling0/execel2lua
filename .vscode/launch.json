@@ -8,9 +8,9 @@
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/execl2lua.py",
+            "program": "${workspaceFolder}/src/execl2lua.py",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/src/"
         },
     ]
 }
