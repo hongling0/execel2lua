@@ -214,23 +214,23 @@ class sheetctx:
         self.table_c[key] = row
 
 
-def transfer_z(sctx, bootsheet):
-    name = bootsheet.name
-    if bootsheet.nrows < 4:
+def transfer_z(sctx, booksheet):
+    name = booksheet.name
+    if booksheet.nrows < 4:
         raise Exception("Error format " + name)
 
     tctx = tablectx(sctx, name[2:])
-    for row in range(bootsheet.nrows):
+    for row in range(booksheet.nrows):
         if(row < 4):
             continue
         else:
             rctx = rowctx(tctx)
             skip = False
-            for col in range(bootsheet.ncols):
-                coltype = bootsheet.cell(1, col).value
-                colname = bootsheet.cell(2, col).value
-                colattr = bootsheet.cell(3, col).value
-                cellval = bootsheet.cell(row, col).value
+            for col in range(booksheet.ncols):
+                coltype = booksheet.cell(1, col).value
+                colname = booksheet.cell(2, col).value
+                colattr = booksheet.cell(3, col).value
+                cellval = booksheet.cell(row, col).value
 
                 if str(cellval).startswith("//"):
                     skip = True
@@ -242,7 +242,7 @@ def transfer_z(sctx, bootsheet):
                 try:
                     rctx.read_ceil(coltype, colname, colattr, cellval)
                 except Exception as e:
-                    raise Exception("Exception @" + name + "." + bootsheet.name
+                    raise Exception("Exception @" + name + "." + booksheet.name
                                     + ("(") + str(row+1) + ", " + str(col) + ")\n"
                                     + repr(e) + "\n"
                                     + traceback.format_exc())
@@ -252,40 +252,48 @@ def transfer_z(sctx, bootsheet):
     tctx.finish()
 
 
-def transfer_y(sctx, bootsheet):
-    name = bootsheet.name
-    if bootsheet.nrows < 3:
+def transfer_y(sctx, booksheet):
+    name = booksheet.name
+    if booksheet.nrows < 3:
+        raise Exception("Error format " + name)
+    if booksheet.ncols < 2:
         raise Exception("Error format " + name)
 
-    k_coltype = bootsheet.cell(1, 0).value
-    k_colattr = bootsheet.cell(2, 0).value
-    v_coltype = bootsheet.cell(1, 1).value
-    v_colattr = bootsheet.cell(2, 1).value
-    l_coltype = bootsheet.cell(1, 2).value
-    l_colattr = bootsheet.cell(2, 2).value
+    k_coltype = booksheet.cell(1, 0).value
+    k_colattr = booksheet.cell(2, 0).value
+    v_coltype = booksheet.cell(1, 1).value
+    v_colattr = booksheet.cell(2, 1).value
+    if booksheet.ncols >= 3:
+        l_coltype = booksheet.cell(1, 2).value
+        l_colattr = booksheet.cell(2, 2).value
+    else:
+        l_coltype = l_colattr = ''
 
     tctx = tablectx(sctx, name[2:])
-    for row in range(bootsheet.nrows):
+    for row in range(booksheet.nrows):
         if(row < 3):
             continue
         else:
             rctx = rowctx(tctx)
 
-            k_cellval = bootsheet.cell(row, 0).value
+            k_cellval = booksheet.cell(row, 0).value
             if str(k_cellval).startswith("//"):
                 continue
-            v_cellval = bootsheet.cell(row, 1).value
+            v_cellval = booksheet.cell(row, 1).value
             if str(v_cellval).startswith("//"):
                 continue
 
             try:
-                rctx.readflag(l_coltype, l_colattr,
-                              bootsheet.cell(row, 2).value)
+                if booksheet.ncols >= 3:
+                    limitval = booksheet.cell(row, 2).value
+                else:
+                    limitval = ''
+                rctx.readflag(l_coltype, l_colattr, limitval)
                 rctx.setvalue(k_coltype, k_colattr, k_cellval,
                               v_coltype, v_colattr, v_cellval)
             except Exception as e:
                 raise Exception("Exception @"+name
-                                + "." + bootsheet.name
+                                + "." + booksheet.name
                                 + ("(") + str(row + 1) + ")\n"
                                 + repr(e) + "\n"
                                 + traceback.format_exc())
@@ -295,27 +303,27 @@ def transfer_y(sctx, bootsheet):
     tctx.finish()
 
 
-def transfer_g(sctx, bootsheet):
-    name = bootsheet.name
-    if bootsheet.nrows < 3:
+def transfer_g(sctx, booksheet):
+    name = booksheet.name
+    if booksheet.nrows < 3:
         raise Exception("Error format " + name)
 
     tctx = tablectx(sctx, "_G")
-    for row in range(bootsheet.nrows):
+    for row in range(booksheet.nrows):
         if(row < 3):
             continue
         else:
             rctx = rowctx(tctx)
 
-            k_coltype = bootsheet.cell(1, 0).value
-            k_colattr = bootsheet.cell(2, 0).value
-            k_cellval = bootsheet.cell(row, 0).value
+            k_coltype = booksheet.cell(1, 0).value
+            k_colattr = booksheet.cell(2, 0).value
+            k_cellval = booksheet.cell(row, 0).value
             if str(k_cellval).startswith("//"):
                 continue
 
-            v_coltype = bootsheet.cell(1, 1).value
-            v_colattr = bootsheet.cell(2, 1).value
-            v_cellval = bootsheet.cell(row, 1).value
+            v_coltype = booksheet.cell(1, 1).value
+            v_colattr = booksheet.cell(2, 1).value
+            v_cellval = booksheet.cell(row, 1).value
             if str(v_cellval).startswith("//"):
                 continue
 
@@ -324,7 +332,7 @@ def transfer_g(sctx, bootsheet):
                               v_coltype, v_colattr, v_cellval)
             except Exception as e:
                 import traceback
-                raise Exception("Exception @" + name + "." + bootsheet.name
+                raise Exception("Exception @" + name + "." + booksheet.name
                                 + ("(") + str(row + 1) + ")\n"
                                 + repr(e) + "\n"
                                 + traceback.format_exc())
