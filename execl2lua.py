@@ -15,7 +15,6 @@ import importlib
 import traceback
 
 importlib.reload(sys)
-encoding = "utf-8"
 
 config = configparser.ConfigParser()
 config['path'] = {
@@ -404,40 +403,38 @@ def trans2lua(sctx, name, path_s, path_c):
         table = sctx.table_s
         fname = os.path.join(path_s, name + ".lua")
         print(fname)
-        out = open(fname, "w")
-
-        if 1 == config.getint("path", "USEG"):
-            def writer_s(f, data):
-                out.write(f)
-                out.write(" = ")
-                out.write(tolua.trans_obj(data, 0, deep))
+        with open(fname, 'w', encoding='UTF-8') as out:
+            if 1 == config.getint("path", "USEG"):
+                def writer_s(f, data):
+                    out.write(f)
+                    out.write(" = ")
+                    out.write(tolua.trans_obj(data, 0, deep).encode('utf8'))
+                    out.write("\n")
+                eacho_tables(table, writer_s)
+            else:
+                out.write("return ")
+                out.write(tolua.trans_obj(table, 0, deep + 1))
+                for f in sorted(table.keys()):
+                    print("\tadd "+f)
                 out.write("\n")
-            eacho_tables(table, writer_s)
-        else:
-            out.write("return ")
-            out.write(tolua.trans_obj(table, 0, deep + 1))
-            for f in sorted(table.keys()):
-                print("\tadd "+f)
-            out.write("\n")
-        out.close()
+            out.close()
 
     if sctx.table_c:
         table = sctx.table_c
         fname = os.path.join(path_c, "prop_" + name + ".lua")
         print(fname)
-        out = open(fname, "w")
-        out.write("module(\"resmng\")\n\n")
+        with open(fname, 'w', encoding='UTF-8') as out:
+            out.write("module(\"resmng\")\n\n")
 
-        def writer_c(f, data):
-            f_name = 'prop%s' % (f.capitalize())
-            f_name_data = f_name + 'Data'
-            out.write(f_name_data)
-            out.write(" = ")
-            out.write(tolua.trans_obj(data, 0, deep))
-            out.write("\n\n")
+            def writer_c(f, data):
+                f_name = 'prop%s' % (f.capitalize())
+                f_name_data = f_name + 'Data'
+                out.write(f_name_data)
+                out.write(" = ")
+                out.write(tolua.trans_obj(data, 0, deep))
+                out.write("\n\n")
 
-        eacho_tables(table, writer_c)
-        out.close()
+            eacho_tables(table, writer_c)
 
 
 def main(xls_list):
