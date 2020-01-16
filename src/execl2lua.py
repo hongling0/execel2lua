@@ -163,9 +163,9 @@ class rowctx:
             self.row_c = v_parser(v_val, v_attr.replace("s", "") + "c")
 
     def finish(self):
-        if self.key_c and (self.flag & (1 << 0)):
+        if self.key_c and len(self.row_c) > 0 and (self.flag & (1 << 0)):
             self.owner.change_c(self.key_c, self.row_c)
-        if self.key_s and (self.flag & (1 << 1)):
+        if self.key_s and len(self.row_s) > 0 and (self.flag & (1 << 1)):
             self.owner.change_s(self.key_s, self.row_s)
 
 
