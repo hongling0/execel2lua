@@ -408,7 +408,7 @@ def trans2lua(sctx, name, path_s, path_c):
                 def writer_s(f, data):
                     out.write(f)
                     out.write(" = ")
-                    out.write(tolua.trans_obj(data, 0, deep).encode('utf8'))
+                    out.write(tolua.trans_obj(data, 0, deep))
                     out.write("\n")
                 eacho_tables(table, writer_s)
             else:
