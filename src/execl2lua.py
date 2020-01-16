@@ -116,8 +116,8 @@ class rowctx:
     def __init__(self, owner):
         self.key_s = None
         self.key_c = None
-        self.row_s = {}
-        self.row_c = {}
+        self.row_s = None
+        self.row_c = None
         self.owner = owner
         self.flag = 3
 
@@ -145,9 +145,13 @@ class rowctx:
                 self.key_c = val_c
 
             if attr.find("s") != -1:
+                if not self.row_s:
+                    self.row_s = {}
                 self.row_s[colname] = val_s
 
             if attr.find("c") != -1:
+                if not self.row_c:
+                    self.row_c = {}
                 self.row_c[colname] = val_c
 
     def setvalue(self, k_coltype, k_attr, k_val, v_coltype, v_attr, v_val):
@@ -163,9 +167,9 @@ class rowctx:
             self.row_c = v_parser(v_val, v_attr.replace("s", "") + "c")
 
     def finish(self):
-        if self.key_c and len(self.row_c) > 0 and (self.flag & (1 << 0)):
+        if self.key_c and self.row_c and (self.flag & (1 << 0)):
             self.owner.change_c(self.key_c, self.row_c)
-        if self.key_s and len(self.row_s) > 0 and (self.flag & (1 << 1)):
+        if self.key_s and self.row_s and (self.flag & (1 << 1)):
             self.owner.change_s(self.key_s, self.row_s)
 
 
